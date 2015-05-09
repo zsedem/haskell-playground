@@ -2,40 +2,41 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 import System.Exit
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import Graphics.Vty hiding (Button)
 import Graphics.Vty.Widgets.All
 import Control.Monad.Trans(liftIO)
 import Git
 
-mkSecondUI items = do
-  fg <- newFocusGroup
-  lst <- newTextList items 1
-  setSelectedUnfocusedAttr lst $ Just (green `on` blue)
-  addToFocusGroup fg lst
-  c <- centered
-            -- =<< vLimit 10
-            -- =<< hLimit 50
-            =<< bordered lst
-  return (c, fg)
+
+createWindow items = do
+  mainFocusGroup <- newFocusGroup
+  textList <- newTextList items 1
+  setSelectedUnfocusedAttr textList $ Just (green `on` blue)
+  addToFocusGroup mainFocusGroup textList
+  formattedTextList <- centered
+                        -- =<< vLimit 10
+                        -- =<< hLimit 50
+                        =<< bordered textList
+  return (formattedTextList, mainFocusGroup)
 
 main :: IO ()
 main = runInGitContext $ do
-    gitContext <- getContext
+    _gitContext <- getContext
     stagedFiles <- getStagedFiles
 
     liftIO $ do
-      coll <- newCollection
+      mainCollection <- newCollection
 
-      (ui2, fg2) <- mkSecondUI stagedFiles
-      switchToSecond <- addToCollection coll ui2 fg2
+      (ui2, mainFocusGroup) <- createWindow stagedFiles
+      _ <- addToCollection mainCollection ui2 mainFocusGroup
 
-      let keyHandler = \something k mods ->
+      let keyHandler = \_focusGroup k mods ->
             case (k, mods) of
                 (KChar 'n', [MCtrl]) -> return True
                 (KEsc, []) -> exitSuccess
                 _ -> return False
 
-      fg2 `onKeyPressed` keyHandler
+      mainFocusGroup `onKeyPressed` keyHandler
 
-      runUi coll $ defaultContext { focusAttr = black `on` yellow }
+      runUi mainCollection $ defaultContext { focusAttr = black `on` yellow }
