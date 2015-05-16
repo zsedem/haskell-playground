@@ -11,8 +11,7 @@ cabal-version:       >=1.10
 
 executable git-commander
   main-is:             Main.hs
-  build-depends:       base >=4.6 && <4.7,
-                       vty, vty-ui, text, mtl,
+  build-depends:       base, vty, vty-ui, text, mtl,
                        basic-prelude
   ghc-options: -threaded
   default-extensions: GeneralizedNewtypeDeriving,

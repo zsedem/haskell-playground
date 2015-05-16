@@ -15,6 +15,10 @@ data CommitMessage = CommitMessage
     } deriving(Eq)
 
 
-type FileDiff = Text
+data FileDiff = FileDiff
+    { oldFileName :: Text
+    , newFileName :: Text
+    , diff text
+    }
 type Name = Text
 type Email = Text
