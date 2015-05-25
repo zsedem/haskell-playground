@@ -1,15 +1,17 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase #-}
 module Main where
 import System.Exit
--- import qualified Data.Text as T
+--import System.Clock
+import qualified Data.Text as T
 import Graphics.Vty hiding (Button)
 import Graphics.Vty.Widgets.All
+import Control.Concurrent
 import Control.Monad.Trans(liftIO)
 import Git
 
 
-createWindow items = do
+createFileList items = do
   mainFocusGroup <- newFocusGroup
   textList <- newTextList items 1
   setSelectedUnfocusedAttr textList $ Just (green `on` blue)
@@ -20,15 +22,15 @@ createWindow items = do
                         =<< bordered textList
   return (formattedTextList, mainFocusGroup)
 
-mainpoc :: IO ()
-mainpoc = runInGitContext $ do
+main, main2 :: IO ()
+main = runInGitContext $ do
     _gitContext <- getContext
     stagedFiles <- getStagedFiles
 
     liftIO $ do
       mainCollection <- newCollection
 
-      (ui2, mainFocusGroup) <- createWindow stagedFiles
+      (ui2, mainFocusGroup) <- createFileList stagedFiles
       _ <- addToCollection mainCollection ui2 mainFocusGroup
 
       let keyHandler = \_focusGroup k mods ->
@@ -41,14 +43,26 @@ mainpoc = runInGitContext $ do
 
       runUi mainCollection $ defaultContext { focusAttr = black `on` yellow }
 
-main :: IO ()
-main = do
+main2 = do
   e <- editWidget
-  ui <- centered e
+  countRef <- newIORef (5::Int)
   fg <- newFocusGroup
+  timeText <- plainText ""
+  ui <-  centered e <--> centered timeText
   addToFocusGroup fg e
+  forkIO $
+    forever $ do
+      schedule $ do
+        modifyIORef countRef (+1) 
+        t <- readIORef countRef
+        setText timeText $ fromString $ show t
+      threadDelay 100000
   c <- newCollection
   addToCollection c ui fg
   e `onActivate` \this ->
-      getEditText this >>= (error . unpack . ("You entered: " ++))
+      getEditText this >>= (error . ("You entered: " ++))
   runUi c defaultContext
+
+forever f = 
+  do f
+     forever f
