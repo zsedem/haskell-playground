@@ -6,7 +6,8 @@ import           Data.IORef
 import           Data.Text
 
 
-newtype GitContext a = GitContext { gitContext :: StateT GitContextRef IO a } deriving (Monad, MonadIO)
+newtype GitContext a = GitContext { gitContext :: StateT GitContextRef IO a } 
+    deriving (Functor, Applicative, Monad, MonadIO)
 
 newtype GitContextRef = GitContextRef ( IORef GitStatus )
 
@@ -16,14 +17,14 @@ data GitStatus = GitStatus { stagedFiles           :: [Text]
 
 
 runInGitContext :: GitContext a -> IO a
-runInGitContext GitContext {..} = initGitStatus >>= evalStateT gitContext
+runInGitContext GitContext {..} = initGitContext >>= evalStateT gitContext
 
-initGitStatus :: IO GitContextRef
-initGitStatus = do ioref <- newIORef $
+initGitContext :: IO GitContextRef
+initGitContext = do ioref <- newIORef $
                               GitStatus { stagedFiles=["some.py", "some2.py"]
                                         , unstagedFiles=["some.pyc", "etc/custom.conf"]
                                         }
-                   return $ GitContextRef ioref
+                    return $ GitContextRef ioref
 
 getStagedFiles :: GitContext [Text]
 getStagedFiles = stagedFiles `liftM` getGitStatus
