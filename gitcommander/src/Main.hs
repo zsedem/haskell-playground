@@ -20,8 +20,8 @@ createWindow items = do
                         =<< bordered textList
   return (formattedTextList, mainFocusGroup)
 
-main :: IO ()
-main = runInGitContext $ do
+mainpoc :: IO ()
+mainpoc = runInGitContext $ do
     _gitContext <- getContext
     stagedFiles <- getStagedFiles
 
@@ -40,3 +40,15 @@ main = runInGitContext $ do
       mainFocusGroup `onKeyPressed` keyHandler
 
       runUi mainCollection $ defaultContext { focusAttr = black `on` yellow }
+
+main :: IO ()
+main = do
+  e <- editWidget
+  ui <- centered e
+  fg <- newFocusGroup
+  addToFocusGroup fg e
+  c <- newCollection
+  addToCollection c ui fg
+  e `onActivate` \this ->
+      getEditText this >>= (error . unpack . ("You entered: " ++))
+  runUi c defaultContext
