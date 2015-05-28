@@ -13,7 +13,7 @@ executable git-commander
   main-is:             Main.hs
   build-depends:       base, vty, vty-ui, text, mtl,
                        basic-prelude
-  ghc-options: -threaded
+  ghc-options: -Wall -threaded
   default-extensions: GeneralizedNewtypeDeriving,
                       ScopedTypeVariables
   hs-source-dirs:      src
