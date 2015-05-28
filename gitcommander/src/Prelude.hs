@@ -5,7 +5,8 @@ module Prelude(
     (++),
     unpack,
     error,
-    P.show
+    P.show,
+    P.length
 ) where
 import CorePrelude hiding (on, error)
 import qualified "base" Prelude as P

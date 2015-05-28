@@ -11,27 +11,50 @@ import Control.Monad.Trans(liftIO)
 import Git
 
 
-createFileList items = do
-  mainFocusGroup <- newFocusGroup
-  textList <- newTextList items 1
+createFileList items = newTextList items 1
+
+decorateList textList = do
   setSelectedUnfocusedAttr textList $ Just (green `on` blue)
-  addToFocusGroup mainFocusGroup textList
   formattedTextList <- centered
                         -- =<< vLimit 10
                         -- =<< hLimit 50
                         =<< bordered textList
-  return (formattedTextList, mainFocusGroup)
+  return formattedTextList
 
 main, main2 :: IO ()
 main = runInGitContext $ do
     _gitContext <- getContext
     stagedFiles <- getStagedFiles
+    unstagedFiles <- getStagedFiles
+    let numOfStagedFiles = length stagedFiles
+        numOfunstagedFiles = length unstagedFiles
 
     liftIO $ do
       mainCollection <- newCollection
+      mainFocusGroup <- newFocusGroup
 
-      (ui2, mainFocusGroup) <- createFileList stagedFiles
-      _ <- addToCollection mainCollection ui2 mainFocusGroup
+      stagedFilesList <- createFileList stagedFiles
+      unstagedFilesList <- createFileList unstagedFiles
+      
+      stagedFilesList `onKeyPressed`  \_focusGroup k mods ->
+            case (k, mods) of
+                (KDown, []) -> selectHandler stagedFilesList unstagedFilesList (>=numOfStagedFiles)                               
+                _ -> return False
+
+      unstagedFilesList `onSelectionChange` \case
+              SelectionOn k _ _ -> print k
+              _ -> return ()
+
+      ui <- (plainText "Staged Files" >>= centered)
+            <--> decorateList unstagedFilesList
+            <--> ((plainText "Unstaged Files" >>= centered)
+            <--> decorateList stagedFilesList
+            <--> ((plainText "Some" >>= centered >>= hLimit 60)
+             <++> (plainText "Note" >>= centered >>= hLimit 60)))
+
+      addToFocusGroup mainFocusGroup ui
+
+      _ <- addToCollection mainCollection ui mainFocusGroup
 
       let keyHandler = \_focusGroup k mods ->
             case (k, mods) of
@@ -43,6 +66,17 @@ main = runInGitContext $ do
 
       runUi mainCollection $ defaultContext { focusAttr = black `on` yellow }
 
+selectHandler::Widget (List a b) -> Widget (List a b) -> (Int -> Bool) -> IO Bool
+selectHandler source destination predicate = do 
+  selected <- getSelected source
+  case selected of
+    Nothing -> return False  
+    Just ( i, _) -> if predicate i 
+                      then do focus source
+                              undefined
+                              return True
+                      else return False
+
 main2 = do
   e <- editWidget
   countRef <- newIORef (5::Int)
@@ -50,7 +84,7 @@ main2 = do
   timeText <- plainText ""
   ui <-  centered e <--> centered timeText
   addToFocusGroup fg e
-  forkIO $
+  _ <- forkIO $
     forever $ do
       schedule $ do
         modifyIORef countRef (+1) 
